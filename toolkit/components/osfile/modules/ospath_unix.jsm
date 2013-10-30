@@ -20,6 +20,7 @@
 // Boilerplate used to be able to import this module both from the main
 // thread and from worker threads.
 if (typeof Components != "undefined") {
+  Components.utils.importGlobalProperties(["URL"]);
   // Global definition of |exports|, to keep everybody happy.
   // In non-main thread, |exports| is provided by the module
   // loader.
@@ -33,7 +34,10 @@ let EXPORTED_SYMBOLS = [
   "dirname",
   "join",
   "normalize",
-  "split"
+  "split",
+  "toFileURI",
+  "fromFileURI"
+
 ];
 
 /**
@@ -147,6 +151,34 @@ let split = function(path) {
   };
 };
 exports.split = split;
+
+/**
+ * Returns the file:// URI file path of the given local file path.
+ */
+// The case of %3b is designed to match Services.io, but fundamentally doesn't matter.
+let toFileURIExtraEncodings = {';': '%3b', '?': '%3F', "'": '%27', '#': '%23'};
+let toFileURI = function toFileURI(path) {
+  let uri = encodeURI(this.normalize(path));
+
+  // add a prefix, and encodeURI doesn't escape a few characters that we do
+  // want to escape, so fix that up
+  let prefix = "file://";
+  uri = prefix + uri.replace(/[;?'#]/g, match => toFileURIExtraEncodings[match]);
+
+  return uri;
+};
+exports.toFileURI = toFileURI;
+
+/**
+ * Returns the local file path from a given file URI.
+ */
+let fromFileURI = function fromFileURI(uri) {
+  uri = new URL(uri).pathname;
+  let path = this.normalize(decodeURIComponent(uri));
+  return path;
+};
+exports.fromFileURI = fromFileURI;
+
 
 //////////// Boilerplate
 if (typeof Components != "undefined") {
